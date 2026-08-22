@@ -11,13 +11,12 @@ import {
   ChevronRight,
   Star,
   Sparkles,
-  Info,
+  PenTool,
   BookOpen,
   Trash2,
   RefreshCw,
   Trophy,
-  ArrowLeft,
-  ArrowRight,
+  X,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
 
@@ -59,13 +58,12 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     setDiscardedCards([]);
     setCurrentIndex(0);
     setIsFlipped(false);
+    setShowStrokeHint(false);
     setRoundNumber(1);
     setRoundCompletedModal(false);
   }, [selectedIds]);
 
   const currentCard: HangulSymbol | undefined = activeCards[currentIndex];
-  const currentMastery: MasteryStatus =
-    currentCard ? progress.symbolMastery[currentCard.id]?.status || 'unlearned' : 'unlearned';
   const isFavorite = currentCard ? !!progress.symbolMastery[currentCard.id]?.isFavorite : false;
 
   // Speak current card
@@ -426,18 +424,6 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
         </div>
       </div>
 
-      {/* Mobile Swipe Hint Notice */}
-      <div className="flex items-center justify-between text-[11px] sm:text-xs text-stone-500 px-2">
-        <div className="flex items-center gap-1 text-rose-700 font-semibold">
-          <ArrowLeft className="w-3.5 h-3.5 text-rose-500" />
-          <span>👈 左滑丟棄 (已熟記)</span>
-        </div>
-        <div className="flex items-center gap-1 text-amber-700 font-semibold">
-          <span>👉 右滑再練 (還不熟)</span>
-          <ArrowRight className="w-3.5 h-3.5 text-amber-500" />
-        </div>
-      </div>
-
       {/* Main Flashcard Container with Swipe Support */}
       <div className="perspective-1000 min-h-[380px] sm:min-h-[420px] w-full flex justify-center relative touch-pan-y">
         {/* Swipe Feedback Overlay Badge - LEFT: 丟棄 (Discard) */}
@@ -495,7 +481,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             transition: isDragging ? 'none' : 'transform 0.35s ease, box-shadow 0.3s ease',
           }}
         >
-          {/* ===================== FRONT SIDE (正面: 純諺文大字 + 筆順) ===================== */}
+          {/* ===================== FRONT SIDE (正面: 純諺文大字 + 筆順Icon + 右下角發音) ===================== */}
           <div
             className={`w-full h-full p-6 sm:p-8 flex flex-col justify-between absolute inset-0 backface-hidden ${
               isFlipped ? 'pointer-events-none' : ''
@@ -508,76 +494,90 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
                 {categoryMeta.label}
               </span>
 
+              {/* Top Right: Stroke Order Icon Hint */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowStrokeHint(!showStrokeHint);
+                }}
+                title={showStrokeHint ? '隱藏筆順' : '查看筆順'}
+                className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                  showStrokeHint
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-600 border-stone-200/80'
+                }`}
+              >
+                <PenTool className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Front Center: Big Hangul Character & optional stroke hint popup */}
+            <div className="text-center my-auto py-4 relative flex flex-col items-center justify-center">
+              <div className="text-8xl sm:text-9xl font-black text-stone-900 tracking-tight font-sans select-none drop-shadow-xs">
+                {currentCard.char}
+              </div>
+
+              {/* Stroke Order Overlay Bubble */}
+              {showStrokeHint && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-3 p-3.5 rounded-2xl bg-white/95 backdrop-blur-xs border border-indigo-200 text-xs text-stone-700 text-left space-y-1.5 shadow-lg max-w-sm w-full animate-fadeIn"
+                >
+                  <div className="font-bold text-indigo-900 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>筆順指導</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowStrokeHint(false);
+                      }}
+                      className="text-stone-400 hover:text-stone-700 p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="space-y-1 pt-1">
+                    {currentCard.strokeOrder.map((step, idx) => (
+                      <div key={idx} className="text-stone-600 flex items-start gap-1.5">
+                        <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Front Footer: Bottom Right Audio Play Button */}
+            <div className="flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     soundFx.speakKorean(currentCard.char, 0.7);
                   }}
-                  title="點擊慢速朗讀"
-                  className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                  title="慢速朗讀"
+                  className="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer border border-stone-200/60"
                 >
                   <span>🐢 慢音</span>
                 </button>
 
                 <button
+                  id="front-audio-speak-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSpeak();
                   }}
-                  title="點擊播放韓語真人標準發音 (快捷鍵 V)"
-                  className="p-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/20 active:scale-90 transition-transform cursor-pointer"
+                  title="播放發音 (快捷鍵 V)"
+                  className="p-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/25 active:scale-90 transition-transform cursor-pointer flex items-center gap-1.5"
                 >
                   <Volume2 className="w-5 h-5" />
                 </button>
               </div>
-            </div>
-
-            {/* Front Center: Big Hangul Character */}
-            <div className="text-center my-auto py-6 space-y-4">
-              <div className="text-8xl sm:text-9xl font-black text-stone-900 tracking-tight font-sans select-none drop-shadow-xs">
-                {currentCard.char}
-              </div>
-
-              {/* Stroke Order Hint Toggle */}
-              {showStrokeHint ? (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-block max-w-md mx-auto p-3 rounded-xl bg-stone-100 border border-stone-200 text-xs text-stone-700 text-left space-y-1"
-                >
-                  <div className="font-bold text-stone-900 flex items-center gap-1">
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>筆順指導：</span>
-                  </div>
-                  {currentCard.strokeOrder.map((step, idx) => (
-                    <div key={idx} className="text-stone-600">
-                      {step}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowStrokeHint(true);
-                  }}
-                  className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-indigo-600 font-medium transition-colors cursor-pointer"
-                >
-                  <Info className="w-3.5 h-3.5" />
-                  <span>查看書寫筆順提示</span>
-                </button>
-              )}
-            </div>
-
-            {/* Front Footer: Tap to Flip Guide */}
-            <div className="flex items-center justify-between border-t border-stone-200/70 pt-3 text-xs text-stone-600">
-              <div className="flex items-center gap-1 font-medium">
-                <RotateCw className="w-3.5 h-3.5 text-stone-600" />
-                <span>點擊翻轉查看發音與注音</span>
-              </div>
-              <span className="hidden sm:inline-block text-stone-400 font-mono text-[11px]">
-                左右滑動或快捷鍵：← 丟棄 / → 再練 / 空白鍵翻面
-              </span>
             </div>
           </div>
 
