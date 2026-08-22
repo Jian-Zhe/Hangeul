@@ -13,13 +13,11 @@ import { QuizView } from './components/QuizView';
 import { AlphabetTableView } from './components/AlphabetTableView';
 import { SyllableBuilder } from './components/SyllableBuilder';
 import { ProgressDashboard } from './components/ProgressDashboard';
-import { InstallAppModal } from './components/InstallAppModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('cards');
   const [progress, setProgress] = useState<UserProgress>(() => initializeProgress());
   const [selectedIds, setSelectedIds] = useState<string[]>(() => getSelectedSymbolIds());
-  const [showInstallModal, setShowInstallModal] = useState(false);
 
   // Save progress changes to LocalStorage
   const handleUpdateProgress = (updater: (prev: UserProgress) => UserProgress) => {
@@ -64,7 +62,6 @@ export default function App() {
         selectedCount={selectedIds.length}
         progress={progress}
         onUpdateSettings={handleUpdateSettings}
-        onOpenInstallModal={() => setShowInstallModal(true)}
       />
 
       {/* Main View Area */}
@@ -112,12 +109,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Install App Modal */}
-      <InstallAppModal
-        isOpen={showInstallModal}
-        onClose={() => setShowInstallModal(false)}
-      />
 
       {/* Footer */}
       <footer className="border-t border-stone-200 bg-white/70 py-4 text-center text-xs text-stone-500">
