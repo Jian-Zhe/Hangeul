@@ -110,15 +110,17 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-stone-200 bg-white/70 py-4 text-center text-xs text-stone-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>韓文字母與單字互動學習卡 (Hangul Flashcards) ・ 免費離線互動學習</span>
-          <span className="text-stone-400">
-            支援注音標音、英文羅馬拼音、台語中文字義推敲法與 Web Speech 真人發音
-          </span>
-        </div>
-      </footer>
+      {/* Footer - Only displayed on 'stats' (學習進度) page */}
+      {activeTab === 'stats' && (
+        <footer className="border-t border-stone-200 bg-white/70 py-4 text-center text-xs text-stone-500">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>韓文字母與單字互動學習卡 (Hangul Flashcards) ・ 免費離線互動學習</span>
+            <span className="text-stone-400">
+              支援注音標音、英文羅馬拼音、台語中文字義推敲法與 Web Speech 真人發音
+            </span>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
