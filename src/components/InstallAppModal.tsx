@@ -59,12 +59,12 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
         {/* Modal Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 via-rose-500 to-amber-500 flex items-center justify-center text-white font-black text-2xl shadow-md ring-2 ring-rose-100">
+            <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 via-rose-500 to-amber-500 flex items-center justify-center text-white font-black text-2xl shadow-md ring-2 ring-rose-100 shrink-0">
               한
             </div>
             <div>
-              <h3 className="font-extrabold text-stone-900 text-lg">下載安裝為 App</h3>
-              <p className="text-xs text-stone-500">免去應用商店・離線可用・極速啟動</p>
+              <h3 className="font-extrabold text-stone-900 text-lg">安裝 Hangeul 為獨立 App</h3>
+              <p className="text-xs text-stone-500">免商店下載・全螢幕獨立運行・可離線使用</p>
             </div>
           </div>
           <button
