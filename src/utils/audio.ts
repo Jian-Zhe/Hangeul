@@ -2,6 +2,17 @@
 
 class AudioManager {
   private ctx: AudioContext | null = null;
+  private cachedVoices: SpeechSynthesisVoice[] = [];
+
+  constructor() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const loadVoices = () => {
+        this.cachedVoices = window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }
 
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -171,9 +182,13 @@ class AudioManager {
       utterance.rate = Math.max(0.6, Math.min(rate, 1.2));
       utterance.pitch = 1.0;
 
-      // Check available voices for Korean
-      const voices = window.speechSynthesis.getVoices();
-      const koVoice = voices.find((v) => v.lang.startsWith('ko') || v.lang === 'ko-KR' || v.name.toLowerCase().includes('korean'));
+      // Check available voices for Korean (prefer high quality / native voices)
+      const voices = this.cachedVoices.length > 0 ? this.cachedVoices : window.speechSynthesis.getVoices();
+      const koVoices = voices.filter((v) => v.lang.startsWith('ko') || v.lang === 'ko-KR' || v.name.toLowerCase().includes('korean'));
+      const naturalVoice = koVoices.find(
+        (v) => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Yuna') || v.name.includes('SunHi')
+      );
+      const koVoice = naturalVoice || koVoices[0];
       if (koVoice) {
         utterance.voice = koVoice;
       }
