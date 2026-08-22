@@ -174,16 +174,14 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isAutoPlaying) {
-      // Play sound for front
+      // Play front sound, then flip to back to see the details, and move to next
       handleSpeak();
       timer = setTimeout(() => {
-        // Flip to back
         setIsFlipped(true);
-        // After reading back, move to next card
         setTimeout(() => {
           handleNext();
         }, 2200);
-      }, 2000);
+      }, 1800);
     }
     return () => {
       if (timer) clearTimeout(timer);
@@ -291,7 +289,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
                     soundFx.speakKorean(currentCard.char, 0.7);
                   }}
                   title="點擊慢速朗讀"
-                  className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium flex items-center gap-1 transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span>🐢 慢音</span>
                 </button>
@@ -302,7 +300,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
                     handleSpeak();
                   }}
                   title="點擊播放韓語真人標準發音 (快捷鍵 V)"
-                  className="p-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/20 active:scale-90 transition-transform"
+                  className="p-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/20 active:scale-90 transition-transform cursor-pointer"
                 >
                   <Volume2 className="w-5 h-5" />
                 </button>
@@ -313,10 +311,6 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             <div className="text-center my-auto py-6 space-y-4">
               <div className="text-7xl sm:text-9xl font-black text-stone-900 tracking-tight font-sans select-none drop-shadow-xs">
                 {currentCard.char}
-              </div>
-
-              <div className="text-sm sm:text-base font-semibold text-stone-600">
-                {currentCard.name}
               </div>
 
               {/* Stroke Order Hint Toggle */}
@@ -353,10 +347,10 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             <div className="flex items-center justify-between border-t border-stone-200/70 pt-3 text-xs text-stone-600">
               <div className="flex items-center gap-1 font-medium">
                 <RotateCw className="w-3.5 h-3.5 text-stone-600" />
-                <span>點擊卡片或按「空白鍵」翻轉看發音與注音</span>
+                <span>點擊卡片或按「空白鍵」翻轉查看發音與注音</span>
               </div>
-              <span className="hidden sm:inline-block text-stone-600 font-mono text-[11px]">
-                快捷鍵：← / → 切換，V 聽音
+              <span className="hidden sm:inline-block text-stone-400 font-mono text-[11px]">
+                快捷鍵：← / → 切換，空白鍵翻面，V 聽音
               </span>
             </div>
           </div>
