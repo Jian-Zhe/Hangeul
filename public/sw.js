@@ -1,16 +1,17 @@
-// Basic Service Worker for PWA offline caching & standalone support
-const CACHE_NAME = 'hangul-pwa-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico'
-];
+// Service Worker for PWA with relative path & subpath support (GitHub Pages / custom domains)
+const CACHE_NAME = 'hangul-pwa-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
+      return cache.addAll([
+        './',
+        './index.html',
+        './manifest.json',
+        './pwa-192.png',
+        './pwa-512.png',
+        './icon.svg'
+      ]).catch(() => {});
     })
   );
   self.skipWaiting();
@@ -28,32 +29,31 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation requests fallback to network first, then cache
+  if (event.request.method !== 'GET') return;
+
+  // For navigation requests, try network first, fallback to cached entry
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/index.html') || caches.match('/');
+        return caches.match('./index.html') || caches.match('./');
       })
     );
     return;
   }
 
-  // Stale-while-revalidate for static assets
+  // Cache-first / Stale-while-revalidate for assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch background update
         fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
           }
         }).catch(() => {});
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
+        if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
