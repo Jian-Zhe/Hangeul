@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActiveTab, UserProgress } from '../types';
-import { BookOpen, CheckSquare, Sparkles, BarChart2, Grid, Layers, Volume2 } from 'lucide-react';
+import { BookOpen, CheckSquare, Sparkles, BarChart2, Grid, Layers, Volume2, Download } from 'lucide-react';
 import { HANGUL_SYMBOLS } from '../data/hangulData';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   selectedCount: number;
   progress: UserProgress;
   onUpdateSettings: (newSettings: Partial<UserProgress['settings']>) => void;
+  onOpenInstallModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedCount,
   progress,
   onUpdateSettings,
+  onOpenInstallModal,
 }) => {
   // Calculate total mastered symbols
   const masteredCount = HANGUL_SYMBOLS.filter(
@@ -85,6 +87,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Settings & Stats Badge */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Install App Button */}
+            {onOpenInstallModal && (
+              <button
+                id="header-install-app-btn"
+                onClick={onOpenInstallModal}
+                title="下載並安裝成手機或電腦 App"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100/90 text-rose-700 border border-rose-200/90 text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">下載 App</span>
+                <span className="sm:hidden">App</span>
+              </button>
+            )}
+
             {/* Pronunciation Speed Toggle */}
             <button
               id="header-speed-toggle"
@@ -96,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-stone-700 transition-colors"
             >
               <Volume2 className="w-3.5 h-3.5 text-rose-500" />
-              <span>{progress.settings.audioSpeed < 0.85 ? '🐢 慢速 0.7x' : '🔊 標準 0.9x'}</span>
+              <span>{progress.settings.audioSpeed < 0.85 ? '🐢 0.7x' : '🔊 0.9x'}</span>
             </button>
 
             {/* Quick Mastery Pill */}
@@ -106,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-semibold transition-all shadow-2xs"
             >
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>掌握度: {masteredCount}/40 ({masteryPercent}%)</span>
+              <span>{masteredCount}/40 ({masteryPercent}%)</span>
             </button>
           </div>
         </div>

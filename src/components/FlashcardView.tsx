@@ -425,7 +425,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
       </div>
 
       {/* Main Flashcard Container with Swipe Support */}
-      <div className="perspective-1000 min-h-[380px] sm:min-h-[420px] w-full flex justify-center relative touch-pan-y">
+      <div className="perspective-1000 min-h-[440px] sm:min-h-[460px] w-full flex justify-center relative touch-pan-y">
         {/* Swipe Feedback Overlay Badge - LEFT: 丟棄 (Discard) */}
         {isSwipingLeft && (
           <div
@@ -468,7 +468,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
           onMouseLeave={() => {
             if (isDragging) handleTouchEnd();
           }}
-          className={`w-full max-w-2xl rounded-3xl cursor-grab active:cursor-grabbing transition-all duration-300 transform-style-3d relative shadow-xl hover:shadow-2xl border ${
+          className={`w-full max-w-2xl min-h-[440px] sm:min-h-[460px] rounded-3xl cursor-grab active:cursor-grabbing transition-all duration-300 transform-style-3d relative shadow-xl hover:shadow-2xl border ${
             isFlipped
               ? 'border-indigo-200/90 rotate-y-180 bg-linear-to-b from-stone-900 via-stone-900 to-indigo-950 text-white'
               : 'border-stone-200/90 bg-linear-to-b from-white via-stone-50/50 to-stone-100/60 text-stone-900'
@@ -521,7 +521,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
               {showStrokeHint && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-3 p-3.5 rounded-2xl bg-white/95 backdrop-blur-xs border border-indigo-200 text-xs text-stone-700 text-left space-y-1.5 shadow-lg max-w-sm w-full animate-fadeIn"
+                  className="mt-3 p-3.5 rounded-2xl bg-white/95 backdrop-blur-xs border border-indigo-200 text-xs text-stone-700 text-left space-y-1.5 shadow-lg max-w-sm w-full animate-fadeIn z-20"
                 >
                   <div className="font-bold text-indigo-900 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -583,7 +583,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
 
           {/* ===================== BACK SIDE (背面: 發音、注音、台語諧音) ===================== */}
           <div
-            className={`w-full h-full p-6 sm:p-8 flex flex-col justify-between absolute inset-0 backface-hidden ${
+            className={`w-full h-full p-4 sm:p-6 flex flex-col justify-between absolute inset-0 backface-hidden overflow-y-auto overscroll-contain rounded-3xl ${
               !isFlipped ? 'pointer-events-none' : ''
             }`}
             style={{
@@ -592,72 +592,84 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             }}
           >
             {/* Back Header */}
-            <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+            <div className="flex items-center justify-between border-b border-stone-800/80 pb-2.5 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black text-rose-400">{currentCard.char}</span>
                 <span className="text-xs text-stone-400">發音解析與記憶法</span>
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSpeak();
-                }}
-                title="播放發音"
-                className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs cursor-pointer"
-              >
-                <Volume2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    soundFx.speakKorean(currentCard.char, 0.7);
+                  }}
+                  title="慢速朗讀"
+                  className="px-2 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-medium transition-colors cursor-pointer border border-stone-700/60"
+                >
+                  🐢 慢速
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSpeak();
+                  }}
+                  title="播放發音"
+                  className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs cursor-pointer"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Back Content */}
-            <div className="space-y-3.5 my-auto py-2">
+            {/* Back Content - Clean Scrollable & Scaled */}
+            <div className="space-y-2.5 my-auto py-2">
               {/* Pronunciation Badges (Zhuyin + Romaja + IPA) */}
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-stone-800/80 rounded-xl p-2 border border-stone-700">
+                <div className="bg-stone-800/80 rounded-xl p-1.5 sm:p-2 border border-stone-700">
                   <div className="text-[10px] text-stone-400 font-semibold uppercase">注音符號</div>
-                  <div className="text-lg sm:text-xl font-black text-amber-300 mt-0.5">
+                  <div className="text-base sm:text-lg font-black text-amber-300 mt-0.5">
                     {currentCard.zhuyin}
                   </div>
                 </div>
 
-                <div className="bg-stone-800/80 rounded-xl p-2 border border-stone-700">
+                <div className="bg-stone-800/80 rounded-xl p-1.5 sm:p-2 border border-stone-700">
                   <div className="text-[10px] text-stone-400 font-semibold uppercase">羅馬拼音</div>
-                  <div className="text-lg sm:text-xl font-black text-sky-300 mt-0.5 font-mono">
+                  <div className="text-base sm:text-lg font-black text-sky-300 mt-0.5 font-mono">
                     {currentCard.romaja}
                   </div>
                 </div>
 
-                <div className="bg-stone-800/80 rounded-xl p-2 border border-stone-700">
+                <div className="bg-stone-800/80 rounded-xl p-1.5 sm:p-2 border border-stone-700">
                   <div className="text-[10px] text-stone-400 font-semibold uppercase">音標 IPA</div>
-                  <div className="text-base sm:text-lg font-bold text-emerald-300 mt-0.5 font-mono">
+                  <div className="text-sm sm:text-base font-bold text-emerald-300 mt-0.5 font-mono">
                     {currentCard.ipa}
                   </div>
                 </div>
               </div>
 
               {/* Mnemonic / Taiwanese-Chinese Sound Trick */}
-              <div className="bg-indigo-950/60 rounded-xl p-3 border border-indigo-800/50 space-y-1">
+              <div className="bg-indigo-950/60 rounded-xl p-2.5 sm:p-3 border border-indigo-800/50 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>台語 / 中文諧音助記口訣：</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>台語 / 中文諧音助記：</span>
                 </div>
-                <p className="text-xs sm:text-sm text-stone-200 leading-relaxed">
+                <p className="text-xs sm:text-sm text-stone-200 leading-snug">
                   {currentCard.mnemonic}
                 </p>
               </div>
 
               {/* Sound Tips */}
-              <div className="text-xs text-stone-300 bg-stone-800/50 rounded-xl p-2.5 border border-stone-700/60">
-                <span className="font-semibold text-rose-300">👄 發音嘴型：</span> {currentCard.soundTip}
+              <div className="text-xs text-stone-300 bg-stone-800/60 rounded-xl p-2 sm:p-2.5 border border-stone-700/60 leading-snug">
+                <span className="font-semibold text-rose-300">👄 嘴型秘訣：</span> {currentCard.soundTip}
               </div>
 
               {/* Example Words with Sound */}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide">
+                <div className="text-[10px] sm:text-[11px] font-semibold text-stone-400 uppercase tracking-wide">
                   範例單字（點擊試聽）：
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                   {currentCard.exampleWords.map((ex, idx) => (
                     <div
                       key={idx}
@@ -667,16 +679,16 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
                       }}
                       className="bg-stone-800/90 hover:bg-stone-700/90 p-2 rounded-xl border border-stone-700 flex items-center justify-between cursor-pointer transition-colors group"
                     >
-                      <div>
-                        <div className="flex items-center gap-1.5">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 truncate">
                           <span className="text-xs sm:text-sm font-black text-white group-hover:text-rose-300">
                             {ex.hangul}
                           </span>
                           <span className="text-[10px] text-amber-300">({ex.zhuyin})</span>
                         </div>
-                        <div className="text-[10px] text-stone-400">{ex.meaning}</div>
+                        <div className="text-[10px] text-stone-400 truncate">{ex.meaning}</div>
                       </div>
-                      <Volume2 className="w-3.5 h-3.5 text-stone-400 group-hover:text-white" />
+                      <Volume2 className="w-3.5 h-3.5 text-stone-400 group-hover:text-white shrink-0 ml-1" />
                     </div>
                   ))}
                 </div>
@@ -684,7 +696,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             </div>
 
             {/* Back Footer */}
-            <div className="border-t border-stone-800 pt-2 text-center text-xs text-stone-400">
+            <div className="border-t border-stone-800/80 pt-2 text-center text-[11px] text-stone-400 shrink-0">
               再次點擊翻回正面
             </div>
           </div>

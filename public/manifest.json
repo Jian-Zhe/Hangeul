@@ -1,0 +1,23 @@
+{
+  "name": "韓文字母互動學習卡",
+  "short_name": "韓文40音",
+  "description": "韓文子音母音互動式教學字卡、注音/羅馬拼音、台語諧音助記與真人發音測驗",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e11d48",
+  "icons": [
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
