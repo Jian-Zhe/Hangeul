@@ -18,6 +18,7 @@ import {
   X,
   Undo2,
   CheckCircle2,
+  HelpCircle,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
 
@@ -55,14 +56,33 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showStrokeHint, setShowStrokeHint] = useState(false);
   const [roundCompletedModal, setRoundCompletedModal] = useState(false);
+  const [flyOutDirection, setFlyOutDirection] = useState<'left' | 'right' | null>(null);
+  const [isInstantReset, setIsInstantReset] = useState(false);
 
   // Undo History Stack
   const [historyStack, setHistoryStack] = useState<ActionHistoryEntry[]>([]);
+
+  // One-time dismissible gesture tip banner
+  const [showSwipeTip, setShowSwipeTip] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('hangul_swipe_hint_dismissed_v1') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleDismissTip = () => {
+    setShowSwipeTip(false);
+    try {
+      localStorage.setItem('hangul_swipe_hint_dismissed_v1', 'true');
+    } catch {}
+  };
 
   // Touch Swipe Gesture State
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isAnimatingRef = useRef(false);
 
   // Sync cards when selectedIds change
   useEffect(() => {
@@ -74,9 +94,20 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     setRoundNumber(1);
     setRoundCompletedModal(false);
     setHistoryStack([]);
+    setFlyOutDirection(null);
+    isAnimatingRef.current = false;
   }, [selectedIds]);
 
   const currentCard: HangulSymbol | undefined = activeCards[currentIndex];
+  const nextCard: HangulSymbol | undefined =
+    activeCards.length > 1
+      ? activeCards[(currentIndex + 1) % activeCards.length]
+      : undefined;
+  const thirdCard: HangulSymbol | undefined =
+    activeCards.length > 2
+      ? activeCards[(currentIndex + 2) % activeCards.length]
+      : undefined;
+
   const isFavorite = currentCard ? !!progress.symbolMastery[currentCard.id]?.isFavorite : false;
 
   // Speak current card
@@ -88,25 +119,27 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   }, [currentCard, progress.settings.audioSpeed]);
 
   const handleFlip = useCallback(() => {
+    if (isAnimatingRef.current || flyOutDirection) return;
     soundFx.playFlip();
     setIsFlipped((prev) => !prev);
-  }, []);
+  }, [flyOutDirection]);
 
   const handleNext = useCallback(() => {
-    if (activeCards.length === 0) return;
+    if (activeCards.length === 0 || isAnimatingRef.current) return;
     setIsFlipped(false);
     setShowStrokeHint(false);
     setCurrentIndex((prev) => (prev + 1) % activeCards.length);
   }, [activeCards.length]);
 
   const handlePrev = useCallback(() => {
-    if (activeCards.length === 0) return;
+    if (activeCards.length === 0 || isAnimatingRef.current) return;
     setIsFlipped(false);
     setShowStrokeHint(false);
     setCurrentIndex((prev) => (prev - 1 + activeCards.length) % activeCards.length);
   }, [activeCards.length]);
 
   const handleShuffle = () => {
+    if (isAnimatingRef.current) return;
     const shuffled = [...activeCards].sort(() => Math.random() - 0.5);
     setActiveCards(shuffled);
     setCurrentIndex(0);
@@ -117,9 +150,11 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   // Discard card action (Left swipe / "記住了" button) - marked mastered & removed from current pool
   const handleDiscardCurrent = useCallback((targetCard?: HangulSymbol) => {
     const cardToDiscard = targetCard || currentCard;
-    if (!cardToDiscard) return;
+    if (!cardToDiscard || isAnimatingRef.current) return;
 
-    soundFx.playChime();
+    isAnimatingRef.current = true;
+    soundFx.playShortMastered();
+    setFlyOutDirection('left');
 
     // Record undo state
     setHistoryStack((prev) => [
@@ -154,30 +189,41 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
       };
     });
 
-    const nextDiscarded = [...discardedCards, cardToDiscard];
-    const nextActive = activeCards.filter((c) => c.id !== cardToDiscard.id);
+    setTimeout(() => {
+      setIsInstantReset(true);
+      const nextDiscarded = [...discardedCards, cardToDiscard];
+      const nextActive = activeCards.filter((c) => c.id !== cardToDiscard.id);
 
-    setDiscardedCards(nextDiscarded);
-    setIsFlipped(false);
-    setShowStrokeHint(false);
-    setDragOffset({ x: 0, y: 0 });
+      setDiscardedCards(nextDiscarded);
+      setIsFlipped(false);
+      setShowStrokeHint(false);
+      setDragOffset({ x: 0, y: 0 });
+      setFlyOutDirection(null);
 
-    if (nextActive.length === 0) {
-      // All cards in this round discarded -> trigger new round!
-      setActiveCards([]);
-      setRoundCompletedModal(true);
-    } else {
-      setActiveCards(nextActive);
-      setCurrentIndex((prev) => (prev >= nextActive.length ? 0 : prev));
-    }
+      if (nextActive.length === 0) {
+        // All cards in this round discarded -> trigger new round!
+        setActiveCards([]);
+        setRoundCompletedModal(true);
+      } else {
+        setActiveCards(nextActive);
+        setCurrentIndex((prev) => (prev >= nextActive.length ? 0 : prev));
+      }
+
+      setTimeout(() => {
+        setIsInstantReset(false);
+        isAnimatingRef.current = false;
+      }, 40);
+    }, 220);
   }, [activeCards, currentCard, currentIndex, discardedCards, onUpdateProgress]);
 
   // Keep & Practice Again action (Right swipe / "再練習" button)
   const handlePracticeAgain = useCallback((targetCard?: HangulSymbol) => {
     const cardToPractice = targetCard || currentCard;
-    if (!cardToPractice) return;
+    if (!cardToPractice || isAnimatingRef.current) return;
 
-    soundFx.playFlip();
+    isAnimatingRef.current = true;
+    soundFx.playShortMastered();
+    setFlyOutDirection('right');
 
     // Record undo state
     setHistoryStack((prev) => [
@@ -212,19 +258,28 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
       };
     });
 
-    setIsFlipped(false);
-    setShowStrokeHint(false);
-    setDragOffset({ x: 0, y: 0 });
+    setTimeout(() => {
+      setIsInstantReset(true);
+      setIsFlipped(false);
+      setShowStrokeHint(false);
+      setDragOffset({ x: 0, y: 0 });
+      setFlyOutDirection(null);
 
-    // Move to next card in active set
-    if (activeCards.length > 1) {
-      setCurrentIndex((prev) => (prev + 1) % activeCards.length);
-    }
+      // Move to next card in active set
+      if (activeCards.length > 1) {
+        setCurrentIndex((prev) => (prev + 1) % activeCards.length);
+      }
+
+      setTimeout(() => {
+        setIsInstantReset(false);
+        isAnimatingRef.current = false;
+      }, 40);
+    }, 220);
   }, [activeCards, currentCard, currentIndex, discardedCards, onUpdateProgress]);
 
   // Undo Last Action (還原上一張卡片決定，避免滑錯)
   const handleUndo = useCallback(() => {
-    if (historyStack.length === 0) return;
+    if (historyStack.length === 0 || isAnimatingRef.current) return;
 
     const lastEntry = historyStack[historyStack.length - 1];
     setHistoryStack((prev) => prev.slice(0, -1));
@@ -235,6 +290,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     setIsFlipped(false);
     setShowStrokeHint(false);
     setRoundCompletedModal(false);
+    setFlyOutDirection(null);
 
     // Rollback mastery score slightly if it was marked mastered
     if (lastEntry.action === 'mastered') {
@@ -267,12 +323,14 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     setRoundCompletedModal(false);
     setRoundNumber((r) => r + 1);
     setHistoryStack([]);
+    setFlyOutDirection(null);
+    isAnimatingRef.current = false;
     soundFx.playChime();
   };
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!currentCard) return;
+    if (!currentCard || isAnimatingRef.current) return;
     onUpdateProgress((prev) => {
       const currentSym = prev.symbolMastery[currentCard.id] || {
         status: 'unlearned',
@@ -328,7 +386,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   // Auto-play interval
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
-    if (isAutoPlaying && currentCard) {
+    if (isAutoPlaying && currentCard && !flyOutDirection) {
       handleSpeak();
       timer = setTimeout(() => {
         setIsFlipped(true);
@@ -340,42 +398,46 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isAutoPlaying, currentIndex, currentCard, handleNext, handleSpeak]);
+  }, [isAutoPlaying, currentIndex, currentCard, flyOutDirection, handleNext, handleSpeak]);
 
   // Touch Swipe Handlers (Mobile touch + pointer drag)
   const handleTouchStart = (clientX: number, clientY: number) => {
+    if (isAnimatingRef.current || flyOutDirection) return;
     touchStartRef.current = { x: clientX, y: clientY, time: Date.now() };
     setIsDragging(true);
   };
 
   const handleTouchMove = (clientX: number, clientY: number) => {
-    if (!touchStartRef.current || !isDragging) return;
+    if (!touchStartRef.current || !isDragging || isAnimatingRef.current) return;
     const deltaX = clientX - touchStartRef.current.x;
     const deltaY = clientY - touchStartRef.current.y;
-    setDragOffset({ x: deltaX, y: deltaY * 0.4 });
+    setDragOffset({ x: deltaX, y: deltaY * 0.3 });
   };
 
   const handleTouchEnd = () => {
-    if (!touchStartRef.current) return;
+    if (!touchStartRef.current || isAnimatingRef.current) {
+      setIsDragging(false);
+      return;
+    }
     const distanceX = dragOffset.x;
     const elapsed = Date.now() - touchStartRef.current.time;
     const velocity = Math.abs(distanceX) / elapsed;
 
-    const swipeThreshold = 80;
-    const fastSwipe = velocity > 0.35 && Math.abs(distanceX) > 35;
+    const swipeThreshold = 75;
+    const fastSwipe = velocity > 0.3 && Math.abs(distanceX) > 30;
 
-    if (distanceX < -swipeThreshold || (distanceX < -35 && fastSwipe)) {
+    setIsDragging(false);
+    touchStartRef.current = null;
+
+    if (distanceX < -swipeThreshold || (distanceX < -30 && fastSwipe)) {
       // Swiped LEFT -> 記住了 (Mastered / Discard)
       handleDiscardCurrent();
-    } else if (distanceX > swipeThreshold || (distanceX > 35 && fastSwipe)) {
+    } else if (distanceX > swipeThreshold || (distanceX > 30 && fastSwipe)) {
       // Swiped RIGHT -> 再練習 (Practice again)
       handlePracticeAgain();
     } else {
       setDragOffset({ x: 0, y: 0 });
     }
-
-    touchStartRef.current = null;
-    setIsDragging(false);
   };
 
   if (activeCards.length === 0 || roundCompletedModal || !currentCard) {
@@ -450,34 +512,48 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-6 space-y-3 sm:space-y-6 select-none">
       {/* Top Bar: Round Status & Action Toolbar */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Deck Status */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          <span className="text-xs sm:text-sm font-black text-indigo-900 bg-indigo-50 px-2.5 sm:px-3 py-1 rounded-xl border border-indigo-200">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <span className="text-xs sm:text-sm font-black text-indigo-900 bg-indigo-50 px-2 sm:px-3 py-1 rounded-xl border border-indigo-200 whitespace-nowrap shrink-0">
             第 {roundNumber} 輪
           </span>
 
-          <span className="text-xs sm:text-sm font-semibold text-stone-600 bg-stone-100 px-2.5 sm:px-3 py-1 rounded-xl border border-stone-200">
+          <span className="text-xs sm:text-sm font-semibold text-stone-600 bg-stone-100 px-2 sm:px-3 py-1 rounded-xl border border-stone-200 whitespace-nowrap shrink-0">
             剩餘 {activeCards.length} 張
           </span>
         </div>
 
         {/* Action Toolbar */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Gesture Help / Tip Toggle Button */}
+          <button
+            id="swipe-help-tip-btn"
+            onClick={() => setShowSwipeTip(!showSwipeTip)}
+            title={showSwipeTip ? '隱藏操作提示' : '查看手勢與操作提示'}
+            className={`p-1.5 sm:p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+              showSwipeTip
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                : 'bg-stone-50 border-stone-200 text-stone-400 hover:text-stone-700'
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+
           {/* Undo Button (還原上一張卡片決定，避免滑錯) */}
           <button
             id="undo-action-btn"
             disabled={historyStack.length === 0}
             onClick={handleUndo}
             title={historyStack.length > 0 ? '還原上一張卡片決定 (避免滑錯)' : '目前無可還原的操作'}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
               historyStack.length > 0
                 ? 'bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 shadow-2xs active:scale-95'
                 : 'bg-stone-50 border border-stone-200 text-stone-300 cursor-not-allowed opacity-50'
             }`}
           >
-            <Undo2 className="w-3.5 h-3.5" />
-            <span className="text-[11px] sm:text-xs">還原</span>
+            <Undo2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-[11px] sm:text-xs whitespace-nowrap">還原</span>
           </button>
 
           {/* Auto Play */}
@@ -485,14 +561,14 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             id="flashcard-autoplay-btn"
             onClick={() => setIsAutoPlaying(!isAutoPlaying)}
             title={isAutoPlaying ? '暫停自動輪播' : '自動循環輪播字卡'}
-            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
               isAutoPlaying
                 ? 'bg-rose-600 text-white shadow-xs animate-pulse'
                 : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
           >
-            {isAutoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span className="hidden sm:inline">{isAutoPlaying ? '自動播放中' : '自動'}</span>
+            {isAutoPlaying ? <Pause className="w-3.5 h-3.5 shrink-0" /> : <Play className="w-3.5 h-3.5 fill-current shrink-0" />}
+            <span className="hidden sm:inline whitespace-nowrap">{isAutoPlaying ? '自動播放中' : '自動'}</span>
           </button>
 
           {/* Shuffle */}
@@ -500,17 +576,17 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             id="flashcard-shuffle-btn"
             onClick={handleShuffle}
             title="隨機打亂順序"
-            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-700 hover:bg-stone-200 text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-700 hover:bg-stone-200 text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap"
           >
-            <Shuffle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">洗牌</span>
+            <Shuffle className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">洗牌</span>
           </button>
 
           {/* Star Favorite */}
           <button
             onClick={handleToggleFavorite}
             title={isFavorite ? '取消收藏' : '收藏此符號'}
-            className={`p-1.5 sm:p-2 rounded-xl border transition-colors cursor-pointer ${
+            className={`p-1.5 sm:p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
               isFavorite
                 ? 'bg-amber-50 border-amber-300 text-amber-500 shadow-2xs'
                 : 'bg-stone-50 border-stone-200 text-stone-400 hover:text-amber-500'
@@ -521,13 +597,33 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
         </div>
       </div>
 
-      {/* Main Flashcard Container with Swipe Support */}
+      {/* One-time dismissible gesture tip banner */}
+      {showSwipeTip && (
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-indigo-50/90 border border-indigo-200/80 text-xs text-indigo-950 animate-fadeIn shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span className="text-[11px] sm:text-xs">
+              <strong>手勢操作提示：</strong>左右滑動卡片（👈 左滑「記住了」・👉 右滑「再練習」），點擊卡片即可翻面查看發音與台語諧音。
+            </span>
+          </div>
+          <button
+            onClick={handleDismissTip}
+            className="p-1 rounded-lg text-indigo-500 hover:text-indigo-800 hover:bg-indigo-100/80 transition-colors cursor-pointer shrink-0"
+            title="關閉提示 (不再主動顯示)"
+            aria-label="關閉提示"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Flashcard Container with Swipe Support & Underlying Stack Deck */}
       <div className="perspective-1000 min-h-[460px] sm:min-h-[480px] w-full flex justify-center relative touch-pan-y">
         {/* Swipe Feedback Overlay Badge - LEFT: 記住了 (Mastered / Discard) */}
-        {isSwipingLeft && (
+        {(isSwipingLeft || flyOutDirection === 'left') && (
           <div
-            className="absolute left-4 sm:left-6 top-6 sm:top-8 z-30 pointer-events-none px-4 py-2 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl flex items-center gap-2 border-2 border-white transition-opacity"
-            style={{ opacity: leftOpacity }}
+            className="absolute left-4 sm:left-6 top-6 sm:top-8 z-30 pointer-events-none px-4 py-2 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base shadow-xl flex items-center gap-2 border-2 border-white transition-opacity duration-200"
+            style={{ opacity: flyOutDirection === 'left' ? 1 : leftOpacity }}
           >
             <CheckCircle2 className="w-5 h-5" />
             <span>記住了</span>
@@ -535,21 +631,80 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
         )}
 
         {/* Swipe Feedback Overlay Badge - RIGHT: 再練習 (Practice Again) */}
-        {isSwipingRight && (
+        {(isSwipingRight || flyOutDirection === 'right') && (
           <div
-            className="absolute right-4 sm:right-6 top-6 sm:top-8 z-30 pointer-events-none px-4 py-2 rounded-2xl bg-amber-500 text-white font-black text-sm sm:text-base shadow-xl flex items-center gap-2 border-2 border-white transition-opacity"
-            style={{ opacity: rightOpacity }}
+            className="absolute right-4 sm:right-6 top-6 sm:top-8 z-30 pointer-events-none px-4 py-2 rounded-2xl bg-amber-500 text-white font-black text-sm sm:text-base shadow-xl flex items-center gap-2 border-2 border-white transition-opacity duration-200"
+            style={{ opacity: flyOutDirection === 'right' ? 1 : rightOpacity }}
           >
             <RefreshCw className="w-5 h-5" />
             <span>再練習</span>
           </div>
         )}
 
-        {/* The Card */}
+        {/* 3rd Deck Card in background (Visual stack depth) */}
+        {thirdCard && (
+          <div
+            className="absolute w-full max-w-2xl min-h-[460px] sm:min-h-[480px] rounded-3xl border border-stone-200 bg-stone-50 shadow-2xs pointer-events-none"
+            style={{
+              transform: `scale(${0.88 + 0.06 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1))}) translateY(${
+                24 - 12 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1))
+              }px)`,
+              opacity: 0.5 + 0.35 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1)),
+              zIndex: 1,
+              transition: isDragging || isInstantReset ? 'none' : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease',
+            }}
+          />
+        )}
+
+        {/* 2nd Card (Underlying Next Card - solid white, completely clean format identical to top card) */}
+        {nextCard && (
+          <div
+            className="absolute w-full max-w-2xl min-h-[460px] sm:min-h-[480px] rounded-3xl border border-stone-200 bg-white shadow-lg pointer-events-none flex flex-col justify-between p-5 sm:p-8 select-none"
+            style={{
+              transform: `scale(${0.94 + 0.06 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1))}) translateY(${
+                12 - 12 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1))
+              }px)`,
+              opacity: 0.9 + 0.1 * (flyOutDirection ? 1 : Math.min(Math.abs(dragOffset.x) / 120, 1)),
+              zIndex: 5,
+              transition: isDragging || isInstantReset ? 'none' : 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease',
+            }}
+          >
+            {/* Next card header - exactly identical to top card */}
+            <div className="flex items-center justify-between">
+              <span className="px-3 py-1 rounded-full text-xs font-bold tracking-wide bg-stone-100 text-stone-800 border border-stone-200/80">
+                {SYMBOL_CATEGORY_LABELS[nextCard.category].label}
+              </span>
+              <div className="p-2.5 rounded-2xl border bg-stone-100 text-stone-600 border-stone-200/80">
+                <PenTool className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Next card big Hangul symbol preview - clean, no extra noisy labels */}
+            <div className="text-center my-auto py-4 relative flex flex-col items-center justify-center">
+              <div className="text-8xl sm:text-9xl font-black text-stone-900 tracking-tight font-sans drop-shadow-xs">
+                {nextCard.char}
+              </div>
+            </div>
+
+            {/* Next card footer - exactly identical to top card */}
+            <div className="flex items-center justify-end">
+              <div className="flex items-center gap-2">
+                <div className="px-2.5 py-1.5 rounded-xl bg-stone-100 text-stone-600 text-xs font-medium flex items-center gap-1 border border-stone-200/60">
+                  <span>🐢 慢音</span>
+                </div>
+                <div className="p-2.5 rounded-2xl bg-rose-500 text-white shadow-md shadow-rose-500/25 flex items-center">
+                  <Volume2 className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Active Card */}
         <div
           id="active-hangul-flashcard"
           onClick={() => {
-            if (Math.abs(dragOffset.x) < 10) {
+            if (Math.abs(dragOffset.x) < 10 && !flyOutDirection) {
               handleFlip();
             }
           }}
@@ -564,22 +719,33 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
           onMouseLeave={() => {
             if (isDragging) handleTouchEnd();
           }}
-          className={`w-full max-w-2xl min-h-[460px] sm:min-h-[480px] rounded-3xl cursor-grab active:cursor-grabbing transition-all duration-300 transform-style-3d relative shadow-xl hover:shadow-2xl border ${
+          className={`w-full max-w-2xl min-h-[460px] sm:min-h-[480px] rounded-3xl cursor-grab active:cursor-grabbing transform-style-3d relative shadow-xl hover:shadow-2xl border ${
             isFlipped
-              ? 'border-indigo-200/90 rotate-y-180 bg-linear-to-b from-stone-900 via-stone-900 to-indigo-950 text-white'
-              : 'border-stone-200/90 bg-linear-to-b from-white via-stone-50/50 to-stone-100/60 text-stone-900'
+              ? 'border-indigo-300 bg-stone-900 text-white'
+              : 'border-stone-200 bg-white text-stone-900'
           }`}
           style={{
+            zIndex: 10,
             transformStyle: 'preserve-3d',
-            transform: isFlipped
-              ? `rotateY(180deg) translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) rotate(${swipeRotation}deg)`
-              : `rotateY(0deg) translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) rotate(${swipeRotation}deg)`,
-            transition: isDragging ? 'none' : 'transform 0.35s ease, box-shadow 0.3s ease',
+            transform:
+              flyOutDirection === 'left'
+                ? 'translate3d(-120vw, 20px, 0) rotate(-20deg)'
+                : flyOutDirection === 'right'
+                ? 'translate3d(120vw, 20px, 0) rotate(20deg)'
+                : isFlipped
+                ? `rotateY(180deg) translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) rotate(${swipeRotation}deg)`
+                : `rotateY(0deg) translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0) rotate(${swipeRotation}deg)`,
+            transition: isDragging || isInstantReset
+              ? 'none'
+              : flyOutDirection
+              ? 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease'
+              : 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease',
+            opacity: 1,
           }}
         >
-          {/* ===================== FRONT SIDE (正面: 純諺文大字 + 筆順Icon + 右下角發音) ===================== */}
+          {/* ===================== FRONT SIDE (正面: 純白色不透明底 + 純諺文大字 + 筆順Icon + 右下角發音) ===================== */}
           <div
-            className={`w-full h-full p-5 sm:p-8 flex flex-col justify-between absolute inset-0 backface-hidden ${
+            className={`w-full h-full p-5 sm:p-8 flex flex-col justify-between absolute inset-0 backface-hidden rounded-3xl bg-white ${
               isFlipped ? 'pointer-events-none' : ''
             }`}
             style={{ backfaceVisibility: 'hidden' }}
@@ -611,11 +777,6 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             <div className="text-center my-auto py-4 relative flex flex-col items-center justify-center">
               <div className="text-8xl sm:text-9xl font-black text-stone-900 tracking-tight font-sans select-none drop-shadow-xs">
                 {currentCard.char}
-              </div>
-
-              {/* Mobile clean swipe hint banner on card */}
-              <div className="mt-2 text-[11px] text-stone-400 font-medium sm:hidden">
-                👈 左滑「記住了」・👉 右滑「再練習」・點擊翻面
               </div>
 
               {/* Stroke Order Overlay Bubble */}
@@ -654,12 +815,8 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
             </div>
 
             {/* Front Footer: Audio Play Button */}
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] text-stone-400 hidden sm:block">
-                點擊卡片翻面看發音與口訣
-              </div>
-
-              <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center justify-end">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -688,7 +845,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({
 
           {/* ===================== BACK SIDE (背面: 發音、注音、台語諧音) ===================== */}
           <div
-            className={`w-full h-full p-4 sm:p-6 flex flex-col justify-between absolute inset-0 backface-hidden overflow-y-auto overscroll-contain rounded-3xl ${
+            className={`w-full h-full p-4 sm:p-6 flex flex-col justify-between absolute inset-0 backface-hidden overflow-y-auto overscroll-contain rounded-3xl bg-stone-900 text-white ${
               !isFlipped ? 'pointer-events-none' : ''
             }`}
             style={{
