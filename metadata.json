@@ -1,0 +1,6 @@
+{
+  "name": "韓文字母與單字互動學習卡 (Hangul Flashcards)",
+  "description": "韓文子音母音互動式教學字卡與認字發音測驗，支援注音/羅馬拼音、台語中文諧音推敲與進度追蹤",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
