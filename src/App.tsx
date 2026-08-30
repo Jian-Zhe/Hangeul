@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ActiveTab, UserProgress } from './types';
 import {
   initializeProgress,
   saveProgress,
   getSelectedSymbolIds,
   saveSelectedSymbolIds,
+  getSelectedVocabIds,
+  saveSelectedVocabIds,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { FlashcardView } from './components/FlashcardView';
 import { SymbolSelector } from './components/SymbolSelector';
+import { VocabFlashcardView } from './components/VocabFlashcardView';
+import { VocabSelector } from './components/VocabSelector';
 import { QuizView } from './components/QuizView';
 import { AlphabetTableView } from './components/AlphabetTableView';
 import { SyllableBuilder } from './components/SyllableBuilder';
@@ -18,6 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('cards');
   const [progress, setProgress] = useState<UserProgress>(() => initializeProgress());
   const [selectedIds, setSelectedIds] = useState<string[]>(() => getSelectedSymbolIds());
+  const [selectedVocabIds, setSelectedVocabIds] = useState<string[]>(() => getSelectedVocabIds());
 
   // Save progress changes to LocalStorage
   const handleUpdateProgress = (updater: (prev: UserProgress) => UserProgress) => {
@@ -43,8 +48,17 @@ export default function App() {
     saveSelectedSymbolIds(ids);
   };
 
+  const handleChangeSelectedVocabIds = (ids: string[]) => {
+    setSelectedVocabIds(ids);
+    saveSelectedVocabIds(ids);
+  };
+
   const handleStartLearning = () => {
     setActiveTab('cards');
+  };
+
+  const handleStartVocabLearning = () => {
+    setActiveTab('vocab_cards');
   };
 
   const handleStudyWeakSymbols = (weakIds: string[]) => {
@@ -60,6 +74,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedCount={selectedIds.length}
+        selectedVocabCount={selectedVocabIds.length}
         progress={progress}
         onUpdateSettings={handleUpdateSettings}
       />
@@ -80,6 +95,24 @@ export default function App() {
             selectedIds={selectedIds}
             onChangeSelectedIds={handleChangeSelectedIds}
             onStartLearning={handleStartLearning}
+            progress={progress}
+          />
+        )}
+
+        {activeTab === 'vocab_cards' && (
+          <VocabFlashcardView
+            selectedVocabIds={selectedVocabIds}
+            progress={progress}
+            onUpdateProgress={handleUpdateProgress}
+            onGoToSelector={() => setActiveTab('vocab_selector')}
+          />
+        )}
+
+        {activeTab === 'vocab_selector' && (
+          <VocabSelector
+            selectedVocabIds={selectedVocabIds}
+            onChangeSelectedVocabIds={handleChangeSelectedVocabIds}
+            onStartLearning={handleStartVocabLearning}
             progress={progress}
           />
         )}

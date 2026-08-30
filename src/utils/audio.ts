@@ -154,6 +154,18 @@ class AudioManager {
     }
   }
 
+  playSwipe() {
+    this.playShortMastered();
+  }
+
+  playTap() {
+    this.playFlip();
+  }
+
+  playLevelUp() {
+    this.playChime();
+  }
+
   /**
    * Speak Korean Text using Web Speech API
    * Formats standalone consonants (like ㄱ -> "그" or "가" or "기역") and vowels (like ㅏ -> "아")

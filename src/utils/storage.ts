@@ -1,11 +1,14 @@
 import { UserProgress } from '../types';
 import { HANGUL_SYMBOLS } from '../data/hangulData';
+import { VOCAB_DATABASE } from '../data/vocabData';
 
 const STORAGE_KEY = 'hangul_learning_progress_v1';
 const SELECTED_SYMBOLS_KEY = 'hangul_selected_symbol_ids_v1';
+const SELECTED_VOCAB_KEY = 'hangul_selected_vocab_ids_v1';
 
 export const DEFAULT_PROGRESS: UserProgress = {
   symbolMastery: {},
+  vocabMastery: {},
   quizStats: {
     totalAnswered: 0,
     totalCorrect: 0,
@@ -22,7 +25,7 @@ export const DEFAULT_PROGRESS: UserProgress = {
   },
 };
 
-// Initialize mastery for all 40 symbols if missing
+// Initialize mastery for all symbols & vocab if missing
 export function initializeProgress(): UserProgress {
   if (typeof window === 'undefined') return DEFAULT_PROGRESS;
 
@@ -31,6 +34,7 @@ export function initializeProgress(): UserProgress {
     let current: UserProgress = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
 
     if (!current.symbolMastery) current.symbolMastery = {};
+    if (!current.vocabMastery) current.vocabMastery = {};
     if (!current.quizStats) current.quizStats = DEFAULT_PROGRESS.quizStats;
     if (!current.settings) current.settings = DEFAULT_PROGRESS.settings;
 
@@ -38,6 +42,17 @@ export function initializeProgress(): UserProgress {
     HANGUL_SYMBOLS.forEach((sym) => {
       if (!current.symbolMastery[sym.id]) {
         current.symbolMastery[sym.id] = {
+          status: 'unlearned',
+          correctCount: 0,
+          wrongCount: 0,
+        };
+      }
+    });
+
+    // Ensure all vocab words have an entry
+    VOCAB_DATABASE.forEach((w) => {
+      if (!current.vocabMastery![w.id]) {
+        current.vocabMastery![w.id] = {
           status: 'unlearned',
           correctCount: 0,
           wrongCount: 0,
@@ -82,5 +97,29 @@ export function saveSelectedSymbolIds(ids: string[]) {
     localStorage.setItem(SELECTED_SYMBOLS_KEY, JSON.stringify(ids));
   } catch (e) {
     console.error('Error saving selected symbols:', e);
+  }
+}
+
+export function getSelectedVocabIds(): string[] {
+  if (typeof window === 'undefined') return VOCAB_DATABASE.map((w) => w.id);
+  try {
+    const raw = localStorage.getItem(SELECTED_VOCAB_KEY);
+    if (raw) {
+      const ids = JSON.parse(raw);
+      if (Array.isArray(ids) && ids.length > 0) return ids;
+    }
+  } catch {
+    // Ignore
+  }
+  // Default to first 45 essential greetings and daily phrases
+  return VOCAB_DATABASE.filter((w) => w.category === 'daily_greeting' || w.category === 'daily_phrase').map((w) => w.id);
+}
+
+export function saveSelectedVocabIds(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SELECTED_VOCAB_KEY, JSON.stringify(ids));
+  } catch (e) {
+    console.error('Error saving selected vocab IDs:', e);
   }
 }

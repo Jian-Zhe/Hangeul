@@ -42,10 +42,16 @@ export const SymbolSelector: React.FC<SymbolSelectorProps> = ({
     }
   };
 
-  const handleSelectPreset = (preset: 'all' | 'basic24' | 'consonants' | 'vowels' | 'double' | 'compound' | 'weak') => {
+  const handleSelectPreset = (preset: 'all' | 'allWithBatchim' | 'basic24' | 'consonants' | 'vowels' | 'double' | 'compound' | 'batchim7' | 'batchimDouble' | 'weak') => {
     let ids: string[] = [];
     switch (preset) {
       case 'all':
+        // 40 basic and double consonants + vowels
+        ids = HANGUL_SYMBOLS.filter(
+          (s) => s.category !== 'batchim_basic' && s.category !== 'batchim_double'
+        ).map((s) => s.id);
+        break;
+      case 'allWithBatchim':
         ids = HANGUL_SYMBOLS.map((s) => s.id);
         break;
       case 'basic24':
@@ -69,6 +75,12 @@ export const SymbolSelector: React.FC<SymbolSelectorProps> = ({
       case 'compound':
         ids = HANGUL_SYMBOLS.filter((s) => s.category === 'compound_vowel').map((s) => s.id);
         break;
+      case 'batchim7':
+        ids = HANGUL_SYMBOLS.filter((s) => s.category === 'batchim_basic').map((s) => s.id);
+        break;
+      case 'batchimDouble':
+        ids = HANGUL_SYMBOLS.filter((s) => s.category === 'batchim_double').map((s) => s.id);
+        break;
       case 'weak':
         ids = HANGUL_SYMBOLS.filter((s) => {
           const status = progress.symbolMastery[s.id]?.status;
@@ -87,6 +99,8 @@ export const SymbolSelector: React.FC<SymbolSelectorProps> = ({
     'double_consonant',
     'basic_vowel',
     'compound_vowel',
+    'batchim_basic',
+    'batchim_double',
   ];
 
   return (
@@ -126,23 +140,41 @@ export const SymbolSelector: React.FC<SymbolSelectorProps> = ({
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => handleSelectPreset('all')}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-stone-100 text-stone-700 hover:bg-stone-200 transition-colors"
+            >
+              標準 40 音
+            </button>
+            <button
+              onClick={() => handleSelectPreset('allWithBatchim')}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 isAllSelected
                   ? 'bg-stone-900 text-white shadow-xs'
                   : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
-              全部 40 音
+              全部 (含終聲收音 58個)
+            </button>
+            <button
+              onClick={() => handleSelectPreset('batchim7')}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors"
+            >
+              🎯 7大代表收音
+            </button>
+            <button
+              onClick={() => handleSelectPreset('batchimDouble')}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+            >
+              ⚡ 11個雙收音
             </button>
             <button
               onClick={() => handleSelectPreset('basic24')}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
             >
               🌟 初學 24 音
             </button>
             <button
               onClick={() => handleSelectPreset('consonants')}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors"
             >
               19 個子音
             </button>

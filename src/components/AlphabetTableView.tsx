@@ -63,7 +63,7 @@ export const AlphabetTableView: React.FC<AlphabetTableViewProps> = ({
                 : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
           >
-            全部 40 音 ({HANGUL_SYMBOLS.length})
+            全部符號 ({HANGUL_SYMBOLS.length})
           </button>
           <button
             onClick={() => setSelectedCategory('basic_consonant')}
@@ -104,6 +104,26 @@ export const AlphabetTableView: React.FC<AlphabetTableViewProps> = ({
             }`}
           >
             11 複合母音
+          </button>
+          <button
+            onClick={() => setSelectedCategory('batchim_basic')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              selectedCategory === 'batchim_basic'
+                ? 'bg-rose-700 text-white shadow-xs'
+                : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+            }`}
+          >
+            7 大代表收音
+          </button>
+          <button
+            onClick={() => setSelectedCategory('batchim_double')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              selectedCategory === 'batchim_double'
+                ? 'bg-indigo-700 text-white shadow-xs'
+                : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            11 個雙收音口訣
           </button>
         </div>
       </div>

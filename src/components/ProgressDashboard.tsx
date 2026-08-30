@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProgress, SymbolCategory, MasteryStatus } from '../types';
 import { HANGUL_SYMBOLS, SYMBOL_CATEGORY_LABELS } from '../data/hangulData';
+import { VOCAB_DATABASE, VOCAB_CATEGORY_META } from '../data/vocabData';
 import {
   Trophy,
   CheckCircle2,
@@ -40,6 +41,13 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
 
   const masteryPercent = Math.round((masteredSymbols.length / allSymbols.length) * 100);
 
+  // Vocabulary stats
+  const totalVocab = VOCAB_DATABASE.length;
+  const masteredVocab = VOCAB_DATABASE.filter(
+    (w) => progress.vocabMastery?.[w.id]?.status === 'mastered'
+  );
+  const vocabMasteryPercent = totalVocab > 0 ? Math.round((masteredVocab.length / totalVocab) * 100) : 0;
+
   // Category statistics
   const getCategoryStats = (category: SymbolCategory) => {
     const list = allSymbols.filter((s) => s.category === category);
@@ -49,7 +57,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
     return {
       total: list.length,
       mastered,
-      percent: Math.round((mastered / list.length) * 100),
+      percent: list.length > 0 ? Math.round((mastered / list.length) * 100) : 0,
     };
   };
 
@@ -57,6 +65,8 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
   const doubleConsonants = getCategoryStats('double_consonant');
   const basicVowels = getCategoryStats('basic_vowel');
   const compoundVowels = getCategoryStats('compound_vowel');
+  const batchimBasic = getCategoryStats('batchim_basic');
+  const batchimDouble = getCategoryStats('batchim_double');
 
   const accuracyPercent =
     progress.quizStats.totalAnswered > 0
@@ -68,6 +78,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
       onUpdateProgress((prev) => ({
         ...prev,
         symbolMastery: {},
+        vocabMastery: {},
         quizStats: {
           totalAnswered: 0,
           totalCorrect: 0,
@@ -93,19 +104,39 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
         {/* Overall Mastery Rate */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-stone-500">
-            <span className="text-xs font-bold uppercase tracking-wider">總掌握度</span>
+            <span className="text-xs font-bold uppercase tracking-wider">符號掌握度</span>
             <Trophy className="w-4 h-4 text-rose-500" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-stone-900">{masteryPercent}%</span>
             <span className="text-xs text-stone-500 font-semibold">
-              ({masteredSymbols.length}/40 個)
+              ({masteredSymbols.length}/{allSymbols.length} 個)
             </span>
           </div>
           <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
             <div
               className="bg-emerald-500 h-full transition-all duration-500"
               style={{ width: `${masteryPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Vocab Mastery Rate */}
+        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-stone-500">
+            <span className="text-xs font-bold uppercase tracking-wider">日常單字掌握度</span>
+            <BookOpen className="w-4 h-4 text-rose-600" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-black text-rose-600">{vocabMasteryPercent}%</span>
+            <span className="text-xs text-stone-500 font-semibold">
+              ({masteredVocab.length}/{totalVocab} 詞)
+            </span>
+          </div>
+          <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-rose-500 h-full transition-all duration-500"
+              style={{ width: `${vocabMasteryPercent}%` }}
             />
           </div>
         </div>
@@ -146,40 +177,20 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
           </div>
           <div className="text-xs text-stone-400">保持連續答對獲取高分</div>
         </div>
-
-        {/* Needs Practice */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs space-y-2 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between text-stone-500">
-              <span className="text-xs font-bold uppercase tracking-wider">待加強符號</span>
-              <HelpCircle className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="text-3xl font-black text-stone-900 mt-1">
-              {learningSymbols.length + unlearnedSymbols.length} 個
-            </div>
-          </div>
-          <button
-            onClick={handleStudyNeedsReview}
-            disabled={learningSymbols.length + unlearnedSymbols.length === 0}
-            className="w-full py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all disabled:opacity-50"
-          >
-            針對未熟練符號複習
-          </button>
-        </div>
       </div>
 
       {/* Category Breakdown Progress Bars */}
       <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-xs space-y-4">
         <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
           <BarChart2 className="w-4 h-4 text-indigo-600" />
-          <span>字母分組掌握進度條</span>
+          <span>字母與終聲分組掌握進度</span>
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Basic Consonants */}
           <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-emerald-800">14 基本子音 (ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ)</span>
+              <span className="text-emerald-800">14 基本子音</span>
               <span>
                 {basicConsonants.mastered} / {basicConsonants.total} ({basicConsonants.percent}%)
               </span>
@@ -195,7 +206,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
           {/* Double Consonants */}
           <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-amber-800">5 濃音/雙子音 (ㄲㄸㅃㅆㅉ)</span>
+              <span className="text-amber-800">5 濃音/雙子音</span>
               <span>
                 {doubleConsonants.mastered} / {doubleConsonants.total} ({doubleConsonants.percent}%)
               </span>
@@ -211,7 +222,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
           {/* Basic Vowels */}
           <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-blue-800">10 基本母音 (ㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ)</span>
+              <span className="text-blue-800">10 基本母音</span>
               <span>
                 {basicVowels.mastered} / {basicVowels.total} ({basicVowels.percent}%)
               </span>
@@ -227,7 +238,7 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
           {/* Compound Vowels */}
           <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-purple-800">11 複合母音 (ㅐㅒㅔㅖㅘㅙㅚㅝㅞㅟㅢ)</span>
+              <span className="text-purple-800">11 複合母音</span>
               <span>
                 {compoundVowels.mastered} / {compoundVowels.total} ({compoundVowels.percent}%)
               </span>
@@ -239,14 +250,46 @@ export const ProgressDashboard: React.FC<ProgressDashboardProps> = ({
               />
             </div>
           </div>
+
+          {/* Basic Batchim */}
+          <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-rose-800">7 大代表收音</span>
+              <span>
+                {batchimBasic.mastered} / {batchimBasic.total} ({batchimBasic.percent}%)
+              </span>
+            </div>
+            <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-rose-500 h-full transition-all duration-500"
+                style={{ width: `${batchimBasic.percent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Double Batchim */}
+          <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-indigo-800">11 個雙收音口訣</span>
+              <span>
+                {batchimDouble.mastered} / {batchimDouble.total} ({batchimDouble.percent}%)
+              </span>
+            </div>
+            <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-indigo-500 h-full transition-all duration-500"
+                style={{ width: `${batchimDouble.percent}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 40-Symbol Visual Mastery Matrix */}
+      {/* 58-Symbol Visual Mastery Matrix */}
       <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-base font-bold text-stone-900">40 符號掌握狀態矩陣</h3>
+            <h3 className="text-base font-bold text-stone-900">韓文字母與終聲掌握矩陣 ({allSymbols.length} 個)</h3>
             <p className="text-xs text-stone-500 mt-0.5">
               點擊任一字母可直接聽音，點擊右側狀態標籤可快速切換掌握程度。
             </p>

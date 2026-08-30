@@ -18,6 +18,7 @@ interface HeaderProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   selectedCount: number;
+  selectedVocabCount: number;
   progress: UserProgress;
   onUpdateSettings: (newSettings: Partial<UserProgress['settings']>) => void;
 }
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   selectedCount,
+  selectedVocabCount,
   progress,
   onUpdateSettings,
 }) => {
@@ -40,16 +42,29 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; desc: string; badge?: string }[] = [
     {
       id: 'cards',
-      label: '字卡背誦',
+      label: '符號背誦',
       desc: '滑動字卡・台語諧音速記',
       icon: <Layers className="w-5 h-5 sm:w-4 sm:h-4" />,
       badge: `${selectedCount} 個`,
     },
     {
       id: 'selector',
-      label: '自訂符號',
-      desc: '勾選想要背誦的字母',
+      label: '挑選符號',
+      desc: '勾選要背誦的字母與收音',
       icon: <CheckSquare className="w-5 h-5 sm:w-4 sm:h-4" />,
+    },
+    {
+      id: 'vocab_cards',
+      label: '單字背誦',
+      desc: '200句常用日常用語卡片',
+      icon: <BookOpen className="w-5 h-5 sm:w-4 sm:h-4" />,
+      badge: `${selectedVocabCount} 詞`,
+    },
+    {
+      id: 'vocab_selector',
+      label: '挑選單字',
+      desc: '分類挑選 200 個常用日常句',
+      icon: <CheckSquare className="w-5 h-5 sm:w-4 sm:h-4 text-rose-500" />,
     },
     {
       id: 'quiz',
@@ -60,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
     {
       id: 'chart',
       label: '40音總表',
-      desc: '完整母音子音發音對照',
+      desc: '完整母音子音終聲發音對照',
       icon: <Grid className="w-5 h-5 sm:w-4 sm:h-4" />,
     },
     {
